@@ -78,26 +78,31 @@ def iou_distance(atracks: list, btracks: list) -> np.ndarray:
         >>> btracks = [np.array([5, 5, 15, 15]), np.array([25, 25, 35, 35])]
         >>> cost_matrix = iou_distance(atracks, btracks)
     """
-    if atracks and isinstance(atracks[0], np.ndarray) or btracks and isinstance(btracks[0], np.ndarray):
+    if atracks and isinstance(atracks[0], np.ndarray):
         atlbrs = atracks
-        btlbrs = btracks
     else:
         atlbrs = [track.xywha if track.angle is not None else track.xyxy for track in atracks]
+
+    if btracks and isinstance(btracks[0], np.ndarray):
+        btlbrs = btracks
+    else:
         btlbrs = [track.xywha if track.angle is not None else track.xyxy for track in btracks]
 
-    ious = np.zeros((len(atlbrs), len(btlbrs)), dtype=np.float32)
-    if len(atlbrs) and len(btlbrs):
-        if len(atlbrs[0]) == 5 and len(btlbrs[0]) == 5:
-            ious = batch_probiou(
-                np.ascontiguousarray(atlbrs, dtype=np.float32),
-                np.ascontiguousarray(btlbrs, dtype=np.float32),
-            ).numpy()
-        else:
-            ious = bbox_ioa(
-                np.ascontiguousarray(atlbrs, dtype=np.float32),
-                np.ascontiguousarray(btlbrs, dtype=np.float32),
-                iou=True,
-            )
+    if not atlbrs or not btlbrs:
+        return np.ones((len(atlbrs), len(btlbrs)), dtype=np.float32)
+
+    if len(atlbrs[0]) == 5 and len(btlbrs[0]) == 5:
+        ious = batch_probiou(
+            np.ascontiguousarray(atlbrs, dtype=np.float32),
+            np.ascontiguousarray(btlbrs, dtype=np.float32)
+        ).numpy()
+    else:
+        ious = bbox_ioa(
+            np.ascontiguousarray(atlbrs, dtype=np.float32),
+            np.ascontiguousarray(btlbrs, dtype=np.float32),
+            iou=True
+        )
+
     return 1 - ious  # cost matrix
 
 
