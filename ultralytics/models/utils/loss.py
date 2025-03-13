@@ -164,8 +164,7 @@ class DETRLoss(nn.Module):
         Returns:
             (Dict): Dictionary of auxiliary losses.
         """
-        # NOTE: loss class, bbox, giou, mask, dice
-        loss = torch.zeros(5 if masks is not None else 3, device=pred_bboxes.device)
+        loss = torch.zeros(3, device=pred_bboxes.device)
         if match_indices is None and self.use_uni_match:
             match_indices = self.matcher(
                 pred_bboxes[self.uni_match_ind],
@@ -192,20 +191,12 @@ class DETRLoss(nn.Module):
             loss[0] += loss_[f"loss_class{postfix}"]
             loss[1] += loss_[f"loss_bbox{postfix}"]
             loss[2] += loss_[f"loss_giou{postfix}"]
-            # if masks is not None and gt_mask is not None:
-            #     loss_ = self._get_loss_mask(aux_masks, gt_mask, match_indices, postfix)
-            #     loss[3] += loss_[f'loss_mask{postfix}']
-            #     loss[4] += loss_[f'loss_dice{postfix}']
 
-        loss = {
+        return {
             f"loss_class_aux{postfix}": loss[0],
             f"loss_bbox_aux{postfix}": loss[1],
             f"loss_giou_aux{postfix}": loss[2],
         }
-        # if masks is not None and gt_mask is not None:
-        #     loss[f'loss_mask_aux{postfix}'] = loss[3]
-        #     loss[f'loss_dice_aux{postfix}'] = loss[4]
-        return loss
 
     @staticmethod
     def _get_index(match_indices):
@@ -297,7 +288,6 @@ class DETRLoss(nn.Module):
         return {
             **self._get_loss_class(pred_scores, targets, gt_scores, len(gt_bboxes), postfix),
             **self._get_loss_bbox(pred_bboxes, gt_bboxes, postfix),
-            # **(self._get_loss_mask(masks, gt_mask, match_indices, postfix) if masks is not None and gt_mask is not None else {})
         }
 
     def forward(self, pred_bboxes, pred_scores, batch, postfix="", **kwargs):
