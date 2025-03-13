@@ -63,7 +63,7 @@ def linear_assignment(cost_matrix: np.ndarray, thresh: float, use_lap: bool = Tr
 
 def iou_distance(atracks: list, btracks: list) -> np.ndarray:
     """
-    Compute cost based on Intersection over Union (IoU) between tracks.
+    Compute cost matrix based on Intersection over Union (IoU) between tracks.
 
     Args:
         atracks (List[STrack] | List[np.ndarray]): List of tracks 'a' or bounding boxes.
@@ -78,26 +78,21 @@ def iou_distance(atracks: list, btracks: list) -> np.ndarray:
         >>> btracks = [np.array([5, 5, 15, 15]), np.array([25, 25, 35, 35])]
         >>> cost_matrix = iou_distance(atracks, btracks)
     """
-    if atracks and isinstance(atracks[0], np.ndarray) or btracks and isinstance(btracks[0], np.ndarray):
-        atlbrs = atracks
-        btlbrs = btracks
-    else:
-        atlbrs = [track.xywha if track.angle is not None else track.xyxy for track in atracks]
-        btlbrs = [track.xywha if track.angle is not None else track.xyxy for track in btracks]
+    if not atracks or not btracks:
+        return np.empty((len(atracks), len(btracks)), dtype=np.float32)
+    
+    use_oriented = len(atracks[0]) == 5 and len(btracks[0]) == 5
 
-    ious = np.zeros((len(atlbrs), len(btlbrs)), dtype=np.float32)
-    if len(atlbrs) and len(btlbrs):
-        if len(atlbrs[0]) == 5 and len(btlbrs[0]) == 5:
-            ious = batch_probiou(
-                np.ascontiguousarray(atlbrs, dtype=np.float32),
-                np.ascontiguousarray(btlbrs, dtype=np.float32),
-            ).numpy()
-        else:
-            ious = bbox_ioa(
-                np.ascontiguousarray(atlbrs, dtype=np.float32),
-                np.ascontiguousarray(btlbrs, dtype=np.float32),
-                iou=True,
-            )
+    atlbrs = [track.xywha if track.angle is not None else track.xyxy for track in atracks] if not isinstance(atracks[0], np.ndarray) else atracks
+    btlbrs = [track.xywha if track.angle is not None else track.xyxy for track in btracks]  if not isinstance(btracks[0], np.ndarray) else btracks
+
+    atlbrs, btlbrs = np.ascontiguousarray(atlbrs, dtype=np.float32), np.ascontiguousarray(btlbrs, dtype=np.float32)
+
+    if use_oriented:
+        ious = batch_probiou(atlbrs, btlbrs).numpy()
+    else:
+        ious = bbox_ioa(atlbrs, btlbrs, iou=True)
+        
     return 1 - ious  # cost matrix
 
 
