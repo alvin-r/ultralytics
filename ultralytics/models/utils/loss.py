@@ -69,17 +69,18 @@ class DETRLoss(nn.Module):
         # Logits: [b, query, num_classes], gt_class: list[[n, 1]]
         name_class = f"loss_class{postfix}"
         bs, nq = pred_scores.shape[:2]
-        # one_hot = F.one_hot(targets, self.nc + 1)[..., :-1]  # (bs, num_queries, num_classes)
-        one_hot = torch.zeros((bs, nq, self.nc + 1), dtype=torch.int64, device=targets.device)
-        one_hot.scatter_(2, targets.unsqueeze(-1), 1)
-        one_hot = one_hot[..., :-1]
+        
+        # Directly construct one-hot encoding
+        one_hot = torch.zeros((bs, nq, self.nc), dtype=torch.float32, device=targets.device)
+        one_hot.scatter_(2, targets.unsqueeze(-1), 1.0)
+        
         gt_scores = gt_scores.view(bs, nq, 1) * one_hot
-
+        
         if self.fl:
             if num_gts and self.vfl:
                 loss_cls = self.vfl(pred_scores, gt_scores, one_hot)
             else:
-                loss_cls = self.fl(pred_scores, one_hot.float())
+                loss_cls = self.fl(pred_scores, one_hot)
             loss_cls /= max(num_gts, 1) / nq
         else:
             loss_cls = nn.BCEWithLogitsLoss(reduction="none")(pred_scores, gt_scores).mean(1).sum()  # YOLO CLS loss
