@@ -440,15 +440,11 @@ class BYTETracker:
     @staticmethod
     def joint_stracks(tlista, tlistb):
         """Combines two lists of STrack objects into a single list, ensuring no duplicates based on track IDs."""
-        exists = {}
-        res = []
-        for t in tlista:
-            exists[t.track_id] = 1
-            res.append(t)
+        exists = set()
+        res = tlista[:]
         for t in tlistb:
-            tid = t.track_id
-            if not exists.get(tid, 0):
-                exists[tid] = 1
+            if t.track_id not in exists:
+                exists.add(t.track_id)
                 res.append(t)
         return res
 
@@ -474,3 +470,21 @@ class BYTETracker:
         resa = [t for i, t in enumerate(stracksa) if i not in dupa]
         resb = [t for i, t in enumerate(stracksb) if i not in dupb]
         return resa, resb
+
+    def get_kalmanfilter(self):
+        """
+        Returns a Kalman filter object for tracking bounding boxes.
+
+        This method can be overridden if a different KalmanFilter implementation is desired.
+
+        Returns:
+            KalmanFilterXYAH: Initialized Kalman filter object.
+        """
+        return KalmanFilterXYAH()
+
+    def reset_id(self):
+        """
+        Resets the ID counter of STrack.
+        It can be useful when reinitializing the tracking system or starting a new video sequence.
+        """
+        STrack.reset_id()
