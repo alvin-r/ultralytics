@@ -440,16 +440,9 @@ class BYTETracker:
     @staticmethod
     def joint_stracks(tlista, tlistb):
         """Combines two lists of STrack objects into a single list, ensuring no duplicates based on track IDs."""
-        exists = {}
-        res = []
-        for t in tlista:
-            exists[t.track_id] = 1
-            res.append(t)
-        for t in tlistb:
-            tid = t.track_id
-            if not exists.get(tid, 0):
-                exists[tid] = 1
-                res.append(t)
+        res = tlista[:]
+        tlistb_ids = {t.track_id for t in tlistb}
+        res.extend(t for t in tlistb if t.track_id not in tlistb_ids)
         return res
 
     @staticmethod
