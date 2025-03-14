@@ -280,9 +280,10 @@ class BYTETracker:
             >>> args = Namespace(track_buffer=30)
             >>> tracker = BYTETracker(args, frame_rate=30)
         """
-        self.tracked_stracks = []  # type: list[STrack]
-        self.lost_stracks = []  # type: list[STrack]
-        self.removed_stracks = []  # type: list[STrack]
+        # Initialize tracked, lost, and removed tracks as sets for faster membership checking and modifications
+        self.tracked_stracks = set()  # set of STrack
+        self.lost_stracks = set()  # set of STrack
+        self.removed_stracks = set()  # set of STrack
 
         self.frame_id = 0
         self.args = args
@@ -440,17 +441,10 @@ class BYTETracker:
     @staticmethod
     def joint_stracks(tlista, tlistb):
         """Combines two lists of STrack objects into a single list, ensuring no duplicates based on track IDs."""
-        exists = {}
-        res = []
-        for t in tlista:
-            exists[t.track_id] = 1
-            res.append(t)
-        for t in tlistb:
-            tid = t.track_id
-            if not exists.get(tid, 0):
-                exists[tid] = 1
-                res.append(t)
-        return res
+        # Combine unique elements from both lists into a set for optimal performance
+        res = set(tlista)
+        res.update(tlistb)
+        return list(res)
 
     @staticmethod
     def sub_stracks(tlista, tlistb):
