@@ -35,7 +35,6 @@ class KalmanFilterXYAH:
         >>> print(mean)
         >>> print(covariance)
     """
-
     def __init__(self):
         """
         Initialize Kalman filter model matrices with motion and observation uncertainty weights.
@@ -52,9 +51,8 @@ class KalmanFilterXYAH:
         ndim, dt = 4, 1.0
 
         # Create Kalman filter model matrices
-        self._motion_mat = np.eye(2 * ndim, 2 * ndim)
-        for i in range(ndim):
-            self._motion_mat[i, ndim + i] = dt
+        self._motion_mat = np.eye(2 * ndim)
+        self._motion_mat[:ndim, ndim:] = dt * np.eye(ndim)
         self._update_mat = np.eye(ndim, 2 * ndim)
 
         # Motion and observation uncertainty are chosen relative to the current state estimate
@@ -150,16 +148,11 @@ class KalmanFilterXYAH:
             >>> covariance = np.eye(8)
             >>> projected_mean, projected_covariance = kf.project(mean, covariance)
         """
-        std = [
-            self._std_weight_position * mean[3],
-            self._std_weight_position * mean[3],
-            1e-1,
-            self._std_weight_position * mean[3],
-        ]
-        innovation_cov = np.diag(np.square(std))
+        std = self._std_weight_position * mean[3]
+        innovation_cov = np.diag([std, std, 1e-1, std])**2
 
         mean = np.dot(self._update_mat, mean)
-        covariance = np.linalg.multi_dot((self._update_mat, covariance, self._update_mat.T))
+        covariance = self._update_mat @ covariance @ self._update_mat.T
         return mean, covariance + innovation_cov
 
     def multi_predict(self, mean: np.ndarray, covariance: np.ndarray):
@@ -223,16 +216,14 @@ class KalmanFilterXYAH:
             >>> measurement = np.array([1, 1, 1, 1])
             >>> new_mean, new_covariance = kf.update(mean, covariance, measurement)
         """
+
         projected_mean, projected_cov = self.project(mean, covariance)
 
-        chol_factor, lower = scipy.linalg.cho_factor(projected_cov, lower=True, check_finite=False)
-        kalman_gain = scipy.linalg.cho_solve(
-            (chol_factor, lower), np.dot(covariance, self._update_mat.T).T, check_finite=False
-        ).T
+        kalman_gain = np.linalg.solve(projected_cov, (covariance @ self._update_mat.T).T).T
         innovation = measurement - projected_mean
 
-        new_mean = mean + np.dot(innovation, kalman_gain.T)
-        new_covariance = covariance - np.linalg.multi_dot((kalman_gain, projected_cov, kalman_gain.T))
+        new_mean = mean + kalman_gain @ innovation
+        new_covariance = covariance - kalman_gain @ self._update_mat @ covariance
         return new_mean, new_covariance
 
     def gating_distance(
