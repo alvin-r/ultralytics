@@ -12,6 +12,7 @@ import requests
 from ultralytics.hub.utils import HELP_MSG, HUB_WEB_ROOT, PREFIX, TQDM
 from ultralytics.utils import IS_COLAB, LOGGER, SETTINGS, __version__, checks, emojis
 from ultralytics.utils.errors import HUBModelError
+from functools import lru_cache
 
 AGENT_NAME = f"python-{__version__}-colab" if IS_COLAB else f"python-{__version__}-local"
 
@@ -47,11 +48,11 @@ class HUBTrainingSession:
 
         Args:
             identifier (str): Model identifier used to initialize the HUB training session.
-                It can be a URL string or a model key with specific format.
+                It can be a URL string or a model key with a specific format.
 
         Raises:
             ValueError: If the provided model identifier is invalid.
-            ConnectionError: If connecting with global API key is not supported.
+            ConnectionError: If connecting with a global API key is not supported.
             ModuleNotFoundError: If hub-sdk package is not installed.
         """
         from hub_sdk import HUBClient
@@ -181,6 +182,7 @@ class HUBTrainingSession:
         LOGGER.info(f"{PREFIX}View model at {self.model_url} 🚀")
 
     @staticmethod
+    @lru_cache(maxsize=None)
     def _parse_identifier(identifier):
         """
         Parse the given identifier to determine the type and extract relevant components.
@@ -208,7 +210,7 @@ class HUBTrainingSession:
             query_params = parse_qs(parsed_url.query)  # dictionary, i.e. {"api_key": ["API_KEY_HERE"]}
             api_key = query_params.get("api_key", [None])[0]
         else:
-            raise HUBModelError(f"model='{identifier} invalid, correct format is {HUB_WEB_ROOT}/models/MODEL_ID")
+            raise HUBModelError(f"model='{identifier}' invalid, correct format is {HUB_WEB_ROOT}/models/MODEL_ID")
         return api_key, model_id, filename
 
     def _set_train_args(self):
