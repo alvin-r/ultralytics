@@ -417,7 +417,7 @@ def xyxy2xywh(x):
         y (np.ndarray | torch.Tensor): The bounding box coordinates in (x, y, width, height) format.
     """
     assert x.shape[-1] == 4, f"input shape last dimension expected 4 but input shape is {x.shape}"
-    y = empty_like(x)  # faster than clone/copy
+    y = x.clone() if isinstance(x, torch.Tensor) else x.copy()
     y[..., 0] = (x[..., 0] + x[..., 2]) / 2  # x center
     y[..., 1] = (x[..., 1] + x[..., 3]) / 2  # y center
     y[..., 2] = x[..., 2] - x[..., 0]  # width

@@ -52,7 +52,6 @@ def bbox_ioa(box1, box2, iou=False, eps=1e-7):
 def box_iou(box1, box2, eps=1e-7):
     """
     Calculate intersection-over-union (IoU) of boxes. Both sets of boxes are expected to be in (x1, y1, x2, y2) format.
-    Based on https://github.com/pytorch/vision/blob/master/torchvision/ops/boxes.py.
 
     Args:
         box1 (torch.Tensor): A tensor of shape (N, 4) representing N bounding boxes.
@@ -62,13 +61,13 @@ def box_iou(box1, box2, eps=1e-7):
     Returns:
         (torch.Tensor): An NxM tensor containing the pairwise IoU values for every element in box1 and box2.
     """
-    # NOTE: Need .float() to get accurate iou values
-    # inter(N,M) = (rb(N,M,2) - lt(N,M,2)).clamp(0).prod(2)
-    (a1, a2), (b1, b2) = box1.float().unsqueeze(1).chunk(2, 2), box2.float().unsqueeze(0).chunk(2, 2)
-    inter = (torch.min(a2, b2) - torch.max(a1, b1)).clamp_(0).prod(2)
+    box1, box2 = box1.float(), box2.float()
+    area1 = (box1[:, 2] - box1[:, 0]) * (box1[:, 3] - box1[:, 1])
+    area2 = (box2[:, 2] - box2[:, 0]) * (box2[:, 3] - box2[:, 1])
 
-    # IoU = inter / (area1 + area2 - inter)
-    return inter / ((a2 - a1).prod(2) + (b2 - b1).prod(2) - inter + eps)
+    inter = (torch.min(box1[:, None, 2:], box2[:, 2:]) - torch.max(box1[:, None, :2], box2[:, :2])).clamp(0).prod(2)
+    union = area1[:, None] + area2 - inter
+    return inter / (union + eps)
 
 
 def bbox_iou(box1, box2, xywh=True, GIoU=False, DIoU=False, CIoU=False, eps=1e-7):
@@ -167,12 +166,11 @@ def kpt_iou(kpt1, kpt2, area, sigma, eps=1e-7):
     Returns:
         (torch.Tensor): A tensor of shape (N, M) representing keypoint similarities.
     """
-    d = (kpt1[:, None, :, 0] - kpt2[..., 0]).pow(2) + (kpt1[:, None, :, 1] - kpt2[..., 1]).pow(2)  # (N, M, 17)
-    sigma = torch.tensor(sigma, device=kpt1.device, dtype=kpt1.dtype)  # (17, )
+    d = ((kpt1[:, None, :, :2] - kpt2[..., :2]) ** 2).sum(dim=-1)  # (N, M, 17)
+    sigma = torch.tensor(sigma, device=kpt1.device, dtype=kpt1.dtype)  # (17,)
     kpt_mask = kpt1[..., 2] != 0  # (N, 17)
-    e = d / ((2 * sigma).pow(2) * (area[:, None, None] + eps) * 2)  # from cocoeval
-    # e = d / ((area[None, :, None] + eps) * sigma) ** 2 / 2  # from formula
-    return ((-e).exp() * kpt_mask[:, None]).sum(-1) / (kpt_mask.sum(-1)[:, None] + eps)
+    e = d / (2 * (sigma ** 2) * (area[:, None, None] + eps) * 2)
+    return ((-e).exp() * kpt_mask[:, None]).sum(dim=-1) / (kpt_mask.sum(dim=-1)[:, None] + eps)
 
 
 def _get_covariance_matrix(boxes):
