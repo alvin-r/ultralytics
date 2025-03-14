@@ -49,11 +49,16 @@ class PoseValidator(DetectionValidator):
     def __init__(self, dataloader=None, save_dir=None, pbar=None, args=None, _callbacks=None):
         """Initialize a PoseValidator object with custom parameters and assigned attributes."""
         super().__init__(dataloader, save_dir, pbar, args, _callbacks)
+        
+        # Initialize key attributes directly
         self.sigma = None
         self.kpt_shape = None
         self.args.task = "pose"
-        self.metrics = PoseMetrics(save_dir=self.save_dir)
-        if isinstance(self.args.device, str) and self.args.device.lower() == "mps":
+        self.metrics = PoseMetrics(save_dir=save_dir)  # directly use constructor parameter
+
+        # Issue a warning for potential Apple MPS device compatibility issue
+        device = self.args.device.lower() if isinstance(self.args.device, str) else None
+        if device == "mps":
             LOGGER.warning(
                 "WARNING ⚠️ Apple MPS known Pose bug. Recommend 'device=cpu' for Pose models. "
                 "See https://github.com/ultralytics/ultralytics/issues/4031."
