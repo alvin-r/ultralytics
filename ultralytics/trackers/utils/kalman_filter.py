@@ -52,9 +52,8 @@ class KalmanFilterXYAH:
         ndim, dt = 4, 1.0
 
         # Create Kalman filter model matrices
-        self._motion_mat = np.eye(2 * ndim, 2 * ndim)
-        for i in range(ndim):
-            self._motion_mat[i, ndim + i] = dt
+        self._motion_mat = np.eye(2 * ndim)
+        self._motion_mat[np.arange(ndim), np.arange(ndim) + ndim] = dt
         self._update_mat = np.eye(ndim, 2 * ndim)
 
         # Motion and observation uncertainty are chosen relative to the current state estimate
@@ -113,22 +112,19 @@ class KalmanFilterXYAH:
             >>> covariance = np.eye(8)
             >>> predicted_mean, predicted_covariance = kf.predict(mean, covariance)
         """
-        std_pos = [
-            self._std_weight_position * mean[3],
-            self._std_weight_position * mean[3],
-            1e-2,
-            self._std_weight_position * mean[3],
-        ]
-        std_vel = [
-            self._std_weight_velocity * mean[3],
-            self._std_weight_velocity * mean[3],
-            1e-5,
-            self._std_weight_velocity * mean[3],
-        ]
-        motion_cov = np.diag(np.square(np.r_[std_pos, std_vel]))
+        pos_scale = self._std_weight_position * mean[3]
+        vel_scale = self._std_weight_velocity * mean[3]
 
-        mean = np.dot(mean, self._motion_mat.T)
-        covariance = np.linalg.multi_dot((self._motion_mat, covariance, self._motion_mat.T)) + motion_cov
+        std_pos = [pos_scale, pos_scale, 1e-2, pos_scale]
+        std_vel = [vel_scale, vel_scale, 1e-5, vel_scale]
+
+        # Concatenate position and velocity std components and create diagonal covariance matrix
+        motion_cov = np.diag(np.square(std_pos + std_vel))
+
+        # Updated mean position based on linear motion model
+        mean = mean @ self._motion_mat.T
+        # Update covariance: _motion_mat * covariance * _motion_mat.T + motion_cov
+        covariance = self._motion_mat @ covariance @ self._motion_mat.T + motion_cov
 
         return mean, covariance
 
