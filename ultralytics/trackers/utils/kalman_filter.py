@@ -379,22 +379,17 @@ class KalmanFilterXYWH(KalmanFilterXYAH):
             >>> covariance = np.eye(8)
             >>> predicted_mean, predicted_covariance = kf.predict(mean, covariance)
         """
-        std_pos = [
-            self._std_weight_position * mean[2],
-            self._std_weight_position * mean[3],
-            self._std_weight_position * mean[2],
-            self._std_weight_position * mean[3],
-        ]
-        std_vel = [
-            self._std_weight_velocity * mean[2],
-            self._std_weight_velocity * mean[3],
-            self._std_weight_velocity * mean[2],
-            self._std_weight_velocity * mean[3],
-        ]
-        motion_cov = np.diag(np.square(np.r_[std_pos, std_vel]))
+        width, height = mean[2], mean[3]
+        std_w_pos = self._std_weight_position * width
+        std_h_pos = self._std_weight_position * height
+        std_w_vel = self._std_weight_velocity * width
+        std_h_vel = self._std_weight_velocity * height
 
-        mean = np.dot(mean, self._motion_mat.T)
-        covariance = np.linalg.multi_dot((self._motion_mat, covariance, self._motion_mat.T)) + motion_cov
+        std_array = np.array([std_w_pos, std_h_pos, std_w_pos, std_h_pos, std_w_vel, std_h_vel, std_w_vel, std_h_vel])
+        motion_cov = np.diag(std_array ** 2)
+
+        mean = mean @ self._motion_mat.T
+        covariance = self._motion_mat @ covariance @ self._motion_mat.T + motion_cov
 
         return mean, covariance
 
