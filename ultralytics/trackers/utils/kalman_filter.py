@@ -344,21 +344,16 @@ class KalmanFilterXYWH(KalmanFilterXYAH):
              [ 0.  0.  0.  0.  0.  0.  0.25  0.]
              [ 0.  0.  0.  0.  0.  0.  0.  0.25]]
         """
-        mean_pos = measurement
-        mean_vel = np.zeros_like(mean_pos)
-        mean = np.r_[mean_pos, mean_vel]
+        mean = np.concatenate((measurement, np.zeros_like(measurement)))
 
-        std = [
-            2 * self._std_weight_position * measurement[2],
-            2 * self._std_weight_position * measurement[3],
-            2 * self._std_weight_position * measurement[2],
-            2 * self._std_weight_position * measurement[3],
-            10 * self._std_weight_velocity * measurement[2],
-            10 * self._std_weight_velocity * measurement[3],
-            10 * self._std_weight_velocity * measurement[2],
-            10 * self._std_weight_velocity * measurement[3],
-        ]
-        covariance = np.diag(np.square(std))
+        std = np.array([
+            2 * self._std_weight_position * measurement[2], 2 * self._std_weight_position * measurement[3],
+            2 * self._std_weight_position * measurement[2], 2 * self._std_weight_position * measurement[3],
+            10 * self._std_weight_velocity * measurement[2], 10 * self._std_weight_velocity * measurement[3],
+            10 * self._std_weight_velocity * measurement[2], 10 * self._std_weight_velocity * measurement[3]
+        ])
+
+        covariance = np.diag(std**2)
         return mean, covariance
 
     def predict(self, mean, covariance):
