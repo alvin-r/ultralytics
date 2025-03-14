@@ -120,31 +120,16 @@ def increment_path(path, exist_ok=False, sep="", mkdir=False):
 
     Returns:
         (Path): Incremented path.
-
-    Examples:
-        Increment a directory path:
-        >>> from pathlib import Path
-        >>> path = Path("runs/exp")
-        >>> new_path = increment_path(path)
-        >>> print(new_path)
-        runs/exp2
-
-        Increment a file path:
-        >>> path = Path("runs/exp/results.txt")
-        >>> new_path = increment_path(path)
-        >>> print(new_path)
-        runs/exp/results2.txt
     """
     path = Path(path)  # os-agnostic
     if path.exists() and not exist_ok:
         path, suffix = (path.with_suffix(""), path.suffix) if path.is_file() else (path, "")
 
-        # Method 1
         for n in range(2, 9999):
-            p = f"{path}{sep}{n}{suffix}"  # increment path
+            p = f"{path}{sep}{n}{suffix}"
             if not os.path.exists(p):
+                path = Path(p)
                 break
-        path = Path(p)
 
     if mkdir:
         path.mkdir(parents=True, exist_ok=True)  # make directory
