@@ -116,19 +116,16 @@ class BasePredictor:
         """
         self.args = get_cfg(cfg, overrides)
         self.save_dir = get_save_dir(self.args)
-        if self.args.conf is None:
-            self.args.conf = 0.25  # default conf=0.25
+        self.args.conf = self.args.conf or 0.25  # default conf=0.25
+        self.args.show = self.args.show and check_imshow(warn=True)
+        
         self.done_warmup = False
-        if self.args.show:
-            self.args.show = check_imshow(warn=True)
-
-        # Usable if setup is done
         self.model = None
-        self.data = self.args.data  # data_dict
+        self.data = self.args.data
         self.imgsz = None
         self.device = None
         self.dataset = None
-        self.vid_writer = {}  # dict of {save_path: video_writer, ...}
+        self.vid_writer = {}
         self.plotted_img = None
         self.source_type = None
         self.seen = 0
@@ -165,7 +162,7 @@ class BasePredictor:
         """Run inference on a given image using the specified model and arguments."""
         visualize = (
             increment_path(self.save_dir / Path(self.batch[0][0]).stem, mkdir=True)
-            if self.args.visualize and (not self.source_type.tensor)
+            if self.args.visualize and not self.source_type.tensor
             else False
         )
         return self.model(im, augment=self.args.augment, visualize=visualize, embed=self.args.embed, *args, **kwargs)
